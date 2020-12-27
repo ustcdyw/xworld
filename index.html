@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>TEST</title>
+    <link href="./assets/style/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="./assets/style/app.css"/>
+    <script src="./assets/js/lib/jquery-2.0.0.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="./assets/js/lib/angular.min.js"></script>
+    <script src="./assets/js/app.js"></script>
+    <script type='text/ng-template' id='user.html'></script>  
+    <script type='text/ng-template' id='message.html'></script>  
+</head>
+<body ng-app="chatRoom" ng-controller="chatCtrl">
+
+<!-- chat room -->
+
+<div class="chat-room-wrapper"  ng-show="chatRoomSelected">
+    <div class="online" ng-show="!isChatting">
+        <div class="header-elem">
+            <div class="header-text">{{nickname}}</div>
+        </div>
+        <div class="user-wrapper">
+            <user iscurrentreceiver="receiver===user.nickname" info="user" ng-click="setReceiver(user.nickname)" ng-repeat="user in usersA | orderBy:'-lastMsgTime'"></user>
+        </div>
+    </div>
+    <div class="chat-room" ng-show="isChatting">
+        <div class="header-elem noselect">
+            <div class="header-return" ng-click="setReceiver(''); showHeaderMenu(false); isChatting=false; hasNewMessageFlag=false;"><返回</div>
+            <span class="header-return-dot" ng-show="hasNewMessageFlag"></span>
+            <div class="header-text">{{receiver?receiver:"群聊"}}</div>
+            <div class="header-menu-button" ng-click="clickHeaderMenu()">...</div>
+            <ul class="header-menu" ng-show="headerMenu">
+                <li class="header-menu-elem" ng-show="receiver" ng-click="deleteChat(); showHeaderMenu(false); isChatting=false">删除对话</li>
+                <li class="header-menu-elem" ng-click="clearChat(); showHeaderMenu(false)">清空聊天记录</li>
+                <li class="header-menu-elem" ng-click="showHeaderMenu(false)">关闭</li>
+            </ul>
+        </div>
+        <div class="chat-room-body message-wrapper">
+            <message self="nickname" scrolltothis="scrollToBottom()" info="message" ng-repeat="message in messages"></message>
+        </div>
+        <div class="chat-room-footer">
+            <form class="foot-form" novalidate name="postform" ng-submit="postMessage()">
+                <input type="text" class="" ng-model="words" required>
+                <input type="submit" class="" ng-disabled="postform.$invalid" value="发送"></button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="drift-bottle-wrapper" ng-show="driftBottleSelected">
+    <div class="header-elem">
+        <div class="header-text">BOTTLE</div>
+    </div>
+    <div class="bottle-body">
+        <div class="bottle-body-throw" ng-show="bottleThrowSel">
+            <textarea maxlength="200" class="bottle-text" ng-model="bottleMsg" placeholder="说点什么..."></textarea>
+            <button class="bottle-button pos-close" ng-click="bottleThrowSel=false">关闭</button>
+            <button class="bottle-button pos-throw" ng-click="bottlePost()">扔出去</button>
+        </div>
+        <div class="bottle-body-get" ng-show="bottleGetSel">
+            <textarea readonly class="bottle-text" ng-model="bottleGetMsg"></textarea>
+            <div class="bottle-from" ng-model="bottleGetUser">来自 <span style="color: green;">{{bottleGetUser}}</span> 的瓶子</div>
+            <div class="bottle-date" ng-model="bottleGetDate"><span style="color: green;">{{bottleGetDate}}</span></div>
+            <button class="bottle-button pos-drop" ng-click="bottleGetSel=false">扔回海里</button>
+            <button class="bottle-button pos-add" ng-click="bottleAddFriend()">和TA聊聊</button>
+        </div>
+        <div class="bottle-body-getting" ng-show="bottleGetting">
+            <div>捞瓶子中...</div>
+        </div>
+        <!--
+        <div class="bottle-body-bottles" ng-show="bottleBottlesSel">
+            <div class="message-wrapper">
+                <bottle self="nickname" scrolltothis="scrollToBottom()" info="bottle" ng-repeat="bottle in bottles"></bottle>
+            </div>
+        </div>
+        -->
+    </div>
+    <div class="bottle-footer">
+        <div class="bottle-footer-elem bottle-footer-throw" ng-click="throwBottle()">扔瓶子</div>
+        <div class="bottle-footer-elem bottle-footer-get" ng-click="getBottle()">捞瓶子</div>
+    </div>
+</div>
+
+<div class="web-footer" ng-show="hasLogined">
+    <div ng-if="chatRoomSelected">
+        <div class="footer-elem footer-chat" style="color: green;" ng-click="selectPage('chat')">CHAT</div>
+        <div class="footer-elem footer-bottle"  ng-click="selectPage('bottle')">BOTTLE</div>
+    </div>
+    <div ng-if="driftBottleSelected">
+        <div class="footer-elem footer-chat" ng-click="selectPage('chat')">CHAT</div>
+        <div class="footer-elem footer-bottle" style="color: green;" ng-click="selectPage('bottle')">BOTTLE</div>
+    </div>
+    <!-- <button class="footer-elem footer-chat" style="color:blue;" ng-click="selectPage('chat')">CHAT</button>
+    <button class="footer-elem footer-bottle" ng-click="selectPage('bottle')">BOTTLE</button> -->
+</div>
+<!-- end of chat room -->
+
+<!-- login form -->
+<div class="userform-wrapper"  ng-show="!hasLogined">
+    <form class="login" novalidate name="userform">
+        <div class="form-group">
+            <label for="nickname" class="sr-only"></label>
+            <div class="input-group">
+                <div class="input-group-addon"><span class="glyphicon glyphicon-user"></span></div>
+                <input type="text" class="form-control" id="nickname" placeholder="Your Nickname" ng-model="nickname" required/>
+            </div>
+            <div class="input-group">
+                <div class="input-group-addon"><span class="glyphicon glyphicon-lock"></span></div>
+                <input type="password" class="form-control" id="nickname" placeholder="Your Password" ng-model="password" required/>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary" ng-disabled="!nickname || !password" ng-click="register()">REGISTER</button>
+        <button type="submit" class="btn btn-primary" ng-disabled="!nickname" ng-click="login()">LOG IN</button>
+        <p ng-show="userExisted" class="help-block">Login failed.</p>
+
+    </form>
+</div>
+<!-- end of login form -->
+
+</body>
+</html>
